@@ -164,7 +164,7 @@ void Session_Manager_SQL::initialize_existing_database(const std::string& passph
 void Session_Manager_SQL::store(const Session& session, const Session_Handle& handle)
    {
    if(session.server_info().hostname().empty())
-      return;
+      { return; }
 
    auto stmt = m_db->new_statement("INSERT OR REPLACE INTO tls_sessions"
                                    " VALUES (?1, ?2, ?3, ?4, ?5, ?6)");
