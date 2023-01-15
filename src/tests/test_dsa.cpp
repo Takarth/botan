@@ -8,6 +8,8 @@
 
 #if defined(BOTAN_HAS_DSA)
    #include <botan/dsa.h>
+   #include <botan/bigint.h>
+   #include <botan/dl_group.h>
    #include "test_pubkey.h"
 #endif
 
@@ -43,9 +45,9 @@ class DSA_KAT_Tests final : public PK_Signature_Generation_Test
          const Botan::BigInt g = vars.get_req_bn("G");
          const Botan::BigInt x = vars.get_req_bn("X");
 
-         const Botan::DL_Group grp(p, q, g);
+         const Botan::DL_Group group(p, q, g);
 
-         return std::make_unique<Botan::DSA_PrivateKey>(Test::rng(), grp, x);
+         return std::make_unique<Botan::DSA_PrivateKey>(group, x);
          }
 
       std::string default_padding(const VarMap& vars) const override
@@ -74,9 +76,9 @@ class DSA_Verification_Tests final : public PK_Signature_Verification_Test
          const Botan::BigInt g = vars.get_req_bn("G");
          const Botan::BigInt y = vars.get_req_bn("Y");
 
-         const Botan::DL_Group grp(p, q, g);
+         const Botan::DL_Group group(p, q, g);
 
-         return std::make_unique<Botan::DSA_PublicKey>(grp, y);
+         return std::make_unique<Botan::DSA_PublicKey>(group, y);
          }
 
       std::string default_padding(const VarMap& /*unused*/) const override
