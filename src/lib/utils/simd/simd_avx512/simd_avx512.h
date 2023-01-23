@@ -207,9 +207,19 @@ class SIMD_16x32 final
          return SIMD_16x32(_mm512_andnot_si512(m_avx512, other.m_avx512));
          }
 
+      template<uint8_t TBL>
+      BOTAN_AVX512_FN
+      static SIMD_16x32 ternary_fn(const SIMD_16x32& a,
+                                   const SIMD_16x32& b,
+                                   const SIMD_16x32& c)
+         {
+         return _mm512_ternarylogic_epi32(a.raw(), b.raw(), c.raw(), TBL);
+         }
+
       BOTAN_AVX512_FN
       SIMD_16x32 bswap() const
          {
+         // FIXME!!!!
          const uint8_t BSWAP_MASK[32] = { 3, 2, 1, 0,
                                           7, 6, 5, 4,
                                           11, 10, 9, 8,
@@ -323,13 +333,13 @@ class SIMD_16x32 final
       BOTAN_AVX512_FN
       static SIMD_16x32 choose(const SIMD_16x32& mask, const SIMD_16x32& a, const SIMD_16x32& b)
          {
-         return _mm512_ternarylogic_epi32(mask.raw(), a.raw(), b.raw(), 0xca);
+         return SIMD_16x32::ternary_fn<0xca>(mask, a, b);
          }
 
       BOTAN_AVX512_FN
       static SIMD_16x32 majority(const SIMD_16x32& x, const SIMD_16x32& y, const SIMD_16x32& z)
          {
-         return _mm512_ternarylogic_epi32(x.raw(), y.raw(), z.raw(), 0xe8);
+         return SIMD_16x32::ternary_fn<0xe8>(x, y, z);
          }
 
       BOTAN_FUNC_ISA("avx2")
@@ -345,7 +355,6 @@ class SIMD_16x32 final
       SIMD_16x32(__m512i x) : m_avx512(x) {}
 
    private:
-
       __m512i m_avx512;
    };
 
