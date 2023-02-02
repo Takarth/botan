@@ -135,9 +135,9 @@ PSK::PSK(TLS_Data_Reader& reader,
    }
 
 
-PSK::PSK(const std::pair<Session, Session_Handle>& session_to_resume, Callbacks& callbacks)
+PSK::PSK(std::pair<Session, Session_Handle>& session_to_resume, Callbacks& callbacks)
    {
-   const auto& [session, handle] = session_to_resume;
+   auto& [session, handle] = session_to_resume;
 
    // RFC 8446 4.2.11.2
    //    Each entry in the binders list is computed as an HMAC over a transcript
@@ -156,10 +156,6 @@ PSK::PSK(const std::pair<Session, Session_Handle>& session_to_resume, Callbacks&
    const auto binder_length =
       HashFunction::create_or_throw(cipher.prf_algo())->output_length();
 
-   // TODO: This unneccesarily creates a copy of the master secret. Maybe we want
-   //       to provide something like Session::extract_master_secret()?
-   auto psk = session.master_secret();
-
    // TODO: Currently this does not provide actual millisecond resolution.
    //       This might become a problem when "early data" is implemented and we
    //       deal with servers that employ a strict "freshness" criteria on the
@@ -175,7 +171,7 @@ PSK::PSK(const std::pair<Session, Session_Handle>& session_to_resume, Callbacks&
       .binder = std::vector<uint8_t>(binder_length),
       .cipher_state = Cipher_State::init_with_psk(Connection_Side::Client,
                                                    Cipher_State::PSK_Type::RESUMPTION,
-                                                   std::move(psk),
+                                                   session.extract_master_secret(),
                                                    cipher)
       });
 

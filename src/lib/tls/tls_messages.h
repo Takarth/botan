@@ -225,7 +225,7 @@ class BOTAN_UNSTABLE_API Client_Hello_13 final : public Client_Hello
                       RandomNumberGenerator& rng,
                       const std::string& hostname,
                       const std::vector<std::string>& next_protocols,
-                      const std::optional<std::pair<Session, Session_Handle>>& session_and_handle = std::nullopt);
+                      std::optional<std::pair<Session, Session_Handle>>& session_and_handle);
 
       static std::variant<Client_Hello_13, Client_Hello_12>
       parse(const std::vector<uint8_t>& buf);
