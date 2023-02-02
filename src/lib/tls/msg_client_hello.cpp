@@ -840,18 +840,7 @@ Client_Hello_13::Client_Hello_13(const Policy& policy,
 
    if(session_and_handle.has_value())
       {
-      // RFC 8446 4.6.1
-      //    Clients MUST only resume if the new SNI value is valid for the
-      //    server certificate presented in the original session and SHOULD only
-      //    resume if the SNI value matches the one used in the original session.
-      //
-      // If the provided session posesses a different host name we don't attempt
-      // a resumption. As a result, a normal handshake will be performed.
-      const auto& [session, _] = session_and_handle.value();
-      if(session.server_info().empty() || session.server_info().hostname() == hostname)
-         {
-         m_data->extensions.add(new PSK(session_and_handle.value(), cb));
-         }
+      m_data->extensions.add(new PSK(session_and_handle.value(), cb));
       }
 
    cb.tls_modify_extensions(m_data->extensions, Connection_Side::Client, type());
