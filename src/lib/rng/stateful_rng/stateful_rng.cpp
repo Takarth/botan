@@ -34,68 +34,47 @@ bool Stateful_RNG::is_seeded() const
    return m_reseed_counter > 0;
    }
 
-void Stateful_RNG::add_entropy(const uint8_t input[], size_t input_len)
-   {
-   lock_guard_type<recursive_mutex_type> lock(m_mutex);
-
-   update(input, input_len);
-
-   if(8*input_len >= security_level())
-      {
-      reset_reseed_counter();
-      }
-   }
-
-void Stateful_RNG::initialize_with(const uint8_t input[], size_t len)
+void Stateful_RNG::initialize_with(std::span<const uint8_t> input)
    {
    lock_guard_type<recursive_mutex_type> lock(m_mutex);
 
    clear();
-   add_entropy(input, len);
+   add_entropy(input);
    }
 
-void Stateful_RNG::randomize(uint8_t output[], size_t output_len)
+void Stateful_RNG::fill_bytes_with_input(std::span<uint8_t> output, std::span<const uint8_t> input)
    {
-   randomize_with_input(output, output_len, nullptr, 0);
-   }
-
-void Stateful_RNG::randomize_with_ts_input(uint8_t output[], size_t output_len)
-   {
-   uint8_t additional_input[20] = { 0 };
-
-   store_le(OS::get_high_resolution_clock(), additional_input);
-
-#if defined(BOTAN_HAS_SYSTEM_RNG)
-   System_RNG system_rng;
-   system_rng.randomize(additional_input + 8, sizeof(additional_input) - 8);
-#else
-   store_le(OS::get_system_timestamp_ns(), additional_input + 8);
-   store_le(OS::get_process_id(), additional_input + 16);
-#endif
-
-   randomize_with_input(output, output_len, additional_input, sizeof(additional_input));
-   }
-
-void Stateful_RNG::randomize_with_input(uint8_t output[], size_t output_len,
-                                        const uint8_t input[], size_t input_len)
-   {
-   if(output_len == 0)
-      return;
-
    lock_guard_type<recursive_mutex_type> lock(m_mutex);
+
+   if(output.empty())
+      {
+      // We won't produce any output but we must give the derived stateful
+      // RNG a chance to use the provided input for seeding. Therefore, no
+      // reseed_check() is performed before calling generate_output().
+      this->generate_output({}, input);
+
+      if(8*input.size() >= security_level())
+         {
+         reset_reseed_counter();
+         }
+
+      return;
+      }
 
    const size_t max_per_request = max_number_of_bytes_per_request();
 
    if(max_per_request == 0) // no limit
       {
       reseed_check();
-      this->generate_output(output, output_len, input, input_len);
+      this->generate_output(output, input);
       }
    else
       {
-      while(output_len > 0)
+      size_t output_length = output.size();
+      size_t output_offset = 0;
+      while(output_length > 0)
          {
-         const size_t this_req = std::min(max_per_request, output_len);
+         const size_t this_req = std::min(max_per_request, output_length);
 
          /*
          * We split the request into several requests to the underlying DRBG but
@@ -105,10 +84,10 @@ void Stateful_RNG::randomize_with_input(uint8_t output[], size_t output_len,
          */
 
          reseed_check();
-         this->generate_output(output, this_req, input, input_len);
+         this->generate_output(output.subspan(output_offset, this_req), input);
 
-         output += this_req;
-         output_len -= this_req;
+         output_offset += this_req;
+         output_length -= this_req;
          }
       }
    }
